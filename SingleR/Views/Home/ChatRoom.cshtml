@@ -1,0 +1,131 @@
+﻿<div class="chat-container">
+    <ul class="chat-box" id="Content">
+        <!-- Chat messages will be appended here -->
+    </ul>
+    <div class="input-group">
+        <div class="input-group-prepend">
+            <label class="btn btn-outline-secondary">
+                <span id="fileLabel">+</span> <!-- 用於顯示 + 號或檔案名稱 -->
+                <input type="file" style="display:none;" id="fileInput" multiple>
+            </label>
+        </div>
+        <input type="text" class="form-control" id="message" placeholder="Type a message...">
+        <div class="input-group-append">
+            <button type="button" class="btn btn-primary" id="sendButton">Send</button>
+        </div>
+    </div>
+    <div id="selectedFile" class="text-muted mt-2"></div> <!-- 顯示檔案 -->
+</div>
+<head>
+    <link rel="stylesheet" type="text/css" href="/css/chatroom.css">
+</head>
+
+@section scripts{
+    <script src="~/js/signalr/dist/browser/signalr.js"></script>
+    <script>
+        var connection = new signalR.HubConnectionBuilder().withUrl("/chatHub").build();
+
+        connection.start()
+            .then(function () {
+                console.log("Hub 連線完成");
+                // 加入聊天室
+                connection.invoke("JoinRoom", "@Model").catch(function (err) {
+                    return console.error(err.toString());
+                });
+            })
+            .catch(function (err) {
+                alert('連線錯誤: ' + err.toString());
+            });
+
+        var userId;
+        connection.on("UpdSelfID", function (id) {
+            $('#SelfID').html(id);
+            userId = id;
+        });
+
+        connection.on("ReceiveMessage", function (msg) {
+            $("#Content").append($("<li></li>").attr("class", "list-group-item").text(msg));
+        });
+
+        $(document).ready(function () {
+            // 按下 Enter 送出訊息
+            $("#message").on("keyup", function (event) {
+                if (event.key === "Enter") {
+                    sendChatMessage(userId); // 我們將會創建這個函數來處理送出訊息的功能
+                }
+            });
+
+            // 送出按鈕的點擊事件
+            $("#sendButton").on("click", function () {
+                sendChatMessage(userId);
+            });
+
+            var fileData = [];  // 這將存儲所有的檔案資料
+            $("#fileInput").on("change", function () {
+                var files = this.files;
+                var fileNames = []; // 用於存儲所有選擇的檔案名稱
+                var maxSize = 5 * 1024 * 1024; // 5MB in bytes
+
+                // 重置先前的檔案資料
+                fileData = [];
+
+                for (var i = 0; i < files.length; i++) {
+                    var file = files[i];
+                    if (file.size > maxSize) {
+                        alert("檔案太大！請上傳小於5MB的檔案。");
+                        this.value = ""; // 清除已選擇的檔案
+                        $("#selectedFile").text("");
+                        return; // 終止後續的程式碼執行
+                    }
+                    let reader = new FileReader();
+
+                    reader.onloadend = (function (file) {
+                        return function () {
+                            // 保存該檔案的所有資料到物件
+                            var fileObj = {
+                                base64: reader.result,
+                                extension: file.name.split('.').pop(),
+                                name: file.name
+                            };
+                            fileData.push(fileObj);
+                            fileNames.push(file.name);
+
+                            // 當所有檔案都已讀取完畢時，更新UI
+                            if (fileData.length === files.length) {
+                                $("#selectedFile").text("選擇的檔案: " + fileNames.join(", "));
+                                $("#fileInput").val(""); // 清除輸入檔案的值
+                            }
+                        }
+                    })(file);
+
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            // 送出聊天訊息的功能
+            function sendChatMessage(id) {
+                var message = $("#message").val();
+
+                if (!message && !fileData) return;
+
+                var messageInfo = {
+                    Message: message,
+                    Datetime: new Date().toISOString(),
+                    UID: userId,
+                    DocumentSEQ: "@Model",
+                    AttachmentFile: fileData.map(f => f.base64),
+                    FileExtension: fileData.map(f => f.extension),
+                    FileName: fileData.map(f => f.name)
+                };
+
+                connection.invoke("SendMessageToRoom", messageInfo).catch(function (err) {
+                    return console.error(err.toString());
+                });
+
+                $("#message").val("");
+                $("#fileLabel").text("+");
+                $('#selectedFile').text("");
+            }
+        });
+    </script>
+}

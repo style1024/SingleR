@@ -1,0 +1,58 @@
+﻿.chat-container {
+    border: 1px solid #ddd;
+    padding: 10px;
+    border-radius: 5px;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.chat-box {
+    height: 600px;
+    width : 350px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+}
+
+    .chat-box li {
+        list-style: none;
+        margin-bottom: 10px;
+        border-radius: 10px;
+        padding: 5px 10px;
+    }
+
+    /* Style for messages from others */
+    .chat-box .received {
+        background-color: #f1f1f1;
+        align-self: flex-start;
+    }
+
+    /* Style for messages sent by you */
+    .chat-box .sent {
+        background-color: #4CAF50;
+        color: white;
+        align-self: flex-end;
+    }
+
+.input-group {
+    position: relative;
+}
+
+.input-group {
+    position: relative;
+}
+
+.file-upload-btn {
+    position: absolute;
+    right: 70px; /* 調整這個值，使其與 "Send" 按鈕的寬度匹配 */
+    bottom: 10px;
+    cursor: pointer;
+}
+
+.file-upload-btn input[type="file"] {
+    display: none;
+}
+
+.file-name {
+    font-style: italic;
+    color: #888;
+}
